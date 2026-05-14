@@ -1,22 +1,35 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/hussmaster/gogetter/internal/config"
+	"github.com/hussmaster/gogetter/internal/database"
+	_ "github.com/lib/pq"
 )
 
 func main() {
 	cfg, err := config.Read()
 	if err != nil {
-		log.Fatalf("error reading confg: %v", err)
+		log.Fatalf("error reading confg: %v\n", err)
 	}
 	fmt.Printf("Read config: %+v\n", cfg)
 
+	//Attempt db connection
+	db, err := sql.Open("postgres", cfg.DBURL)
+	if err != nil {
+		log.Fatalf("error opening database connection to: %v\n", err)
+	}
+	//Create new database connection
+	dbQueries := database.New(db)
+
+	//State struct
 	s := &state{
 		configFile: &cfg,
+		db:         dbQueries,
 	}
 
 	//Create empty struct of commands
@@ -25,12 +38,16 @@ func main() {
 		registry: make(map[string]func(*state, command) error),
 	}
 
-	//Register login command
+	//Register commands
 	commandList.register("login", handlerLogin)
+	commandList.register("register", handlerRegister)
+	commandList.register("reset", handlerReset)
+	commandList.register("users", handlerUsers)
+	commandList.register("agg", handlerAgg)
 
 	//Makes sure os.Args is greater than 2
 	if len(os.Args) < 2 {
-		log.Fatalf("not enough arguments")
+		log.Fatal("not enough arguments\n")
 	}
 	cmdName := os.Args[1]
 	cmdArgs := os.Args[2:]
@@ -45,14 +62,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
-//err = cfg.SetUser("ian")
-//if err != nil {
-//	log.Fatalf("couldn't set current user: %v", err)
-//}
-
-//cfg, err = config.Read()
-//if err != nil {
-//	log.Fatalf("error reading config: %v", err)
-//}
-//fmt.Printf("Read config again: %+v\n", cfg)
