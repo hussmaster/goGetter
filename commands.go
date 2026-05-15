@@ -122,6 +122,61 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
+// Adds feed to database
+func handlerAddFeed(s *state, cmd command) error {
+	if len(cmd.args) < 2 {
+		return errors.New("not enough arguments\n")
+	}
+	//Get current user from the config file
+	curUser := s.configFile.CurrentUserName
+	//Get username from database using the username from the configfile
+	curDBUser, err := s.db.GetUser(context.Background(), curUser)
+	if err != nil {
+		return fmt.Errorf("error quering user: %w", err)
+	}
+	//Create feed
+	feed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      cmd.args[0],
+		Url:       cmd.args[1],
+		UserID:    curDBUser.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("error creating the feed with error: %w", err)
+	}
+	fmt.Printf("feed for %v created in the database\n", cmd.args[0])
+	//Return created feed record
+	fmt.Printf("%+v\n", feed)
+	return nil
+}
+
+// Lists feeds in database
+func handlerGetFeeds(s *state, cmd command) error {
+	if len(cmd.args) > 1 {
+		return errors.New("too many arguments. feeds takes 0 cmdline arguments\n")
+	}
+	feeds, err := s.db.GetFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("unable to query feeds table with error: %w", err)
+	}
+	for _, feed := range feeds {
+		feedName := feed.Name
+		feedURL := feed.Url
+		feedUserUserID := feed.UserID
+		//Query users db with uuid in feeds table
+		user, err := s.db.GetFeedUser(context.Background(), feedUserUserID)
+		if err != nil {
+			return fmt.Errorf("unable to query users table with error: %w", err)
+		}
+		feedUser := user.Name
+		//fmt.Printf("Feed name: %v Feed URL: %v Feed created by: %v\n", feedName, feedURL, feedUser)
+		fmt.Printf("%v\n%v\n%v\n", feedName, feedURL, feedUser)
+	}
+	return nil
+}
+
 type commands struct {
 	registry map[string]func(*state, command) error
 }

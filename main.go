@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"os"
 
@@ -16,7 +15,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error reading confg: %v\n", err)
 	}
-	fmt.Printf("Read config: %+v\n", cfg)
+	//fmt.Printf("Read config: %+v\n", cfg)
 
 	//Attempt db connection
 	db, err := sql.Open("postgres", cfg.DBURL)
@@ -44,6 +43,8 @@ func main() {
 	commandList.register("reset", handlerReset)
 	commandList.register("users", handlerUsers)
 	commandList.register("agg", handlerAgg)
+	commandList.register("addfeed", handlerAddFeed)
+	commandList.register("feeds", handlerGetFeeds)
 
 	//Makes sure os.Args is greater than 2
 	if len(os.Args) < 2 {
